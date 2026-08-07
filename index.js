@@ -1,6 +1,6 @@
 require("dotenv").config();
 const express = require("express");
-const cors = require("cors");
+const cors = require("cors"); 
 const { MongoClient, ServerApiVersion } = require("mongodb");
 const app = express();
 const port = process.env.PORT || 3000;
@@ -19,24 +19,40 @@ const client = new MongoClient(uri, {
     deprecationErrors: true,
   },
 });
+
 // ======================================
-async function runStableAPIConnect() {
+async function run() {
   try {
     // Connect the client to the server (optional starting in v4.7)
-    await client.connect();
-
+    // await client.connect();
+    // =============================
     const database = client.db("bookVerse");
     const users = database.collection("users");
-    // =============================
 
     // CREATE USER
     // ============================
     app.post("/users", async (req, res) => {
-      const user = req.body;
-      if (!user.email) {
+      const userData = req.body;
+      if (!userData.email) {
         return res.status(400).send({ message: "Error! User mail not found" });
       }
-      const result = await users.insertOne(user);
+      const newUser = {
+        ...userData,
+        balance: 500,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      };
+      const result = await users.insertOne(newUser);
+      return res.send(result);
+    });
+
+    // GET USER
+    // ============================
+    app.get("/users/:email", async (req, res) => {
+      const email = req.params.email;
+      const query = { email: email };
+
+      const result = await users.findOne(query);
       return res.send(result);
     });
 
@@ -50,7 +66,7 @@ async function runStableAPIConnect() {
     console.error("MongoDB connection error:", error);
   }
 }
-runStableAPIConnect().catch(console.dir);
+run().catch(console.dir);
 // =======================================
 // Routes
 app.get("/", (req, res) => {

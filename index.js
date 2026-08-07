@@ -1,6 +1,6 @@
 require("dotenv").config();
 const express = require("express");
-const cors = require("cors"); 
+const cors = require("cors");
 const { MongoClient, ServerApiVersion } = require("mongodb");
 const app = express();
 const port = process.env.PORT || 3000;
@@ -50,9 +50,49 @@ async function run() {
     // ============================
     app.get("/users/:email", async (req, res) => {
       const email = req.params.email;
-      const query = { email: email };
+      const result = await users.findOne({ email: email });
+      return res.send(result);
+    });
 
-      const result = await users.findOne(query);
+    // UPDATE USER PROFILE
+    //===========================
+    app.patch("/users/:email", async (req, res) => {
+      const email = req.params.email;
+      const profileData = req.body;
+
+      if (!email) {
+        return res.status(400).send({ message: "Error! User mail not found" });
+      }
+
+      await users.updateOne(
+        { email: email },
+        {
+          $set: profileData,
+        },
+      );
+      const result = await users.findOne({ email: email });
+      return res.send(result);
+    });
+
+    // UPDATE USER BALANCE
+    //===========================
+    app.patch("/users/:email/balance", async (req, res) => {
+      const email = req.params.email;
+      const amount = req.body.amount;
+
+      if (!email || !amount) {
+        return res
+          .status(400)
+          .send({ message: "Error! User mail or amount not found" });
+      }
+
+      await users.updateOne(
+        { email: email },
+        {
+          $inc: { balance: amount },
+        },
+      );
+      const result = await users.findOne({ email: email });
       return res.send(result);
     });
 

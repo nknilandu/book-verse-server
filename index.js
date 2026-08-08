@@ -1,7 +1,7 @@
 require("dotenv").config();
 const express = require("express");
 const cors = require("cors");
-const { MongoClient, ServerApiVersion } = require("mongodb");
+const { MongoClient, ServerApiVersion, ObjectId } = require("mongodb");
 const app = express();
 const port = process.env.PORT || 3000;
 
@@ -98,34 +98,75 @@ async function run() {
     });
 
     // CREATE / UPLOAD BOOK
-// ============================
-app.post("/books", async (req, res) => {
-    const bookData = req.body;
+    // ============================
+    app.post("/books", async (req, res) => {
+      const bookData = req.body;
 
-    if (!bookData.coverUrl || !bookData.bookTitle || !bookData.authorName || !bookData.pdfUrl || !bookData.uploaderEmail || !bookData.rightsConfirmed) {
-      return res.status(400).send({
-        message: "Title, PDF URL and user email are required",
-      });
-    }
+      if (
+        !bookData.coverUrl ||
+        !bookData.bookTitle ||
+        !bookData.authorName ||
+        !bookData.pdfUrl ||
+        !bookData.uploaderEmail ||
+        !bookData.rightsConfirmed
+      ) {
+        return res.status(400).send({
+          message: "Title, PDF URL and user email are required",
+        });
+      }
 
-    const newBook = {
-      ...bookData,
-      price: Number(bookData.price),
-      rating: Number(bookData.rating),
-      pages: Number(bookData.pages),
-      downloads: 0,
-      createdAt: new Date(),
-      updatedAt: new Date(),
-    };
+      const newBook = {
+        ...bookData,
+        price: Number(bookData.price),
+        rating: Number(bookData.rating),
+        pages: Number(bookData.pages),
+        downloads: 0,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      };
 
-    const result = await books.insertOne(newBook);
-    return res.send(result);
-});
+      const result = await books.insertOne(newBook);
+      return res.send(result);
+    });
 
+    // GET ALL BOOKS
+    // ============================
+    app.get("/books", async (req, res) => {
+      const email = req.query.email;
+      const query = email ? { uploaderEmail: email } : {};
 
+      const result = await books.find(query).toArray();
+      res.send(result);
+    });
 
+    // GET SINGLE BOOK
+    //=============================
+    app.get("/books/:id", async (req, res) => {
+      const id = req.params.id;
+      const book = await books.findOne({ _id: new ObjectId(id) });
 
+      if (!book) {
+        return res.status(404).send({
+          message: "Book not found",
+        });
+      }
+      res.send(book);
+    });
 
+    // DELETE BOOK
+    // ==========================
+    app.delete("/books/:id", async (req, res) => {
+      const id = req.params.id;
+
+      if (!id) {
+        return res.status(404).send({
+          message: "Book not found",
+        });
+      }
+      const result = await books.deleteOne({ _id: new ObjectId(id) });
+      res.send(result);
+    });
+    // ===========================================================
     // Send a ping to confirm a successful connection
     const result = await client.db("admin").command({ ping: 1 });
     console.log(

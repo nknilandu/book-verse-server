@@ -28,6 +28,7 @@ async function run() {
     // =============================
     const database = client.db("bookVerse");
     const users = database.collection("users");
+    const books = database.collection("books");
 
     // CREATE USER
     // ============================
@@ -95,6 +96,35 @@ async function run() {
       const result = await users.findOne({ email: email });
       return res.send(result);
     });
+
+    // CREATE / UPLOAD BOOK
+// ============================
+app.post("/books", async (req, res) => {
+    const bookData = req.body;
+
+    if (!bookData.coverUrl || !bookData.bookTitle || !bookData.authorName || !bookData.pdfUrl || !bookData.uploaderEmail || !bookData.rightsConfirmed) {
+      return res.status(400).send({
+        message: "Title, PDF URL and user email are required",
+      });
+    }
+
+    const newBook = {
+      ...bookData,
+      price: Number(bookData.price),
+      rating: Number(bookData.rating),
+      pages: Number(bookData.pages),
+      downloads: 0,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    };
+
+    const result = await books.insertOne(newBook);
+    return res.send(result);
+});
+
+
+
+
 
     // Send a ping to confirm a successful connection
     const result = await client.db("admin").command({ ping: 1 });

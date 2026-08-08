@@ -29,6 +29,7 @@ async function run() {
     const database = client.db("bookVerse");
     const users = database.collection("users");
     const books = database.collection("books");
+    const purchases = database.collection("purchases");
 
     // CREATE USER
     // ============================
@@ -143,7 +144,10 @@ async function run() {
     //=============================
     app.get("/books/:id", async (req, res) => {
       const id = req.params.id;
-      const book = await books.findOne({ _id: new ObjectId(id) });
+      const book = await books.findOne(
+        { _id: new ObjectId(id) },
+        { projection: { pdfUrl: 0 } },
+      );
 
       if (!book) {
         return res.status(404).send({
@@ -166,6 +170,77 @@ async function run() {
       const result = await books.deleteOne({ _id: new ObjectId(id) });
       res.send(result);
     });
+
+    // CHECK PURCHASE & DOWNLOAD BOOK
+    // ==========================
+    app.patch("/books/purchase/:id", async (req, res) => {
+      const id = req.params.id;
+      const email = req.body.email;
+
+      const book = await books.findOne({ _id: new ObjectId(id) });
+      const user = await users.findOne({ email: email });
+
+      if (!user || !book) {
+        return res.status(404).send({
+          message: "User or book not found",
+        });
+      }
+
+      // OWNER
+      if (book.uploaderEmail === email) {
+        return res.send({
+          message: "This is your own book",
+          pdfUrl: book.pdfUrl,
+        });
+      }
+
+      const alreadyBuy = await purchases.findOne({
+        email: email,
+        bookId: id,
+      });
+
+      if (alreadyBuy) {
+        return res.send({
+          message: "Already purchased",
+          pdfUrl: book.pdfUrl,
+        });
+      }
+
+      if (user.balance < book.price) {
+        return res.status(400).send({
+          message: "Insufficient balance",
+        });
+      }
+
+      await users.updateOne(
+        {
+          email: email,
+        },
+        {
+          $inc: {
+            balance: -book.price,
+          },
+        },
+      );
+      // save purchase data
+      await purchases.insertOne({
+        email: email,
+        bookId: id,
+        bookTitle: book.bookTitle,
+        authorName: book.authorName,
+        category: book.category,
+        coverUrl: book.coverUrl,
+        price: book.price,
+        pdfUrl: book.pdfUrl,
+        purchaseDate: new Date(),
+      });
+
+      res.send({
+        message: "Purchase successful",
+        pdfUrl: book.pdfUrl,
+      });
+    });
+
     // ===========================================================
     // Send a ping to confirm a successful connection
     const result = await client.db("admin").command({ ping: 1 });

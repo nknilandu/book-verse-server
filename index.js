@@ -243,17 +243,17 @@ async function run() {
 
     // ===========================================================
     // Send a ping to confirm a successful connection
-    const result = await client.db("admin").command({ ping: 1 });
-    console.log(
-      "Pinged your deployment. You successfully connected to MongoDB!",
-    );
-    return result;
+    // const result = await client.db("admin").command({ ping: 1 });
+    // console.log(
+    //   "Pinged your deployment. You successfully connected to MongoDB!",
+    // );
+    // return result;
   } catch (error) {
     console.error("MongoDB connection error:", error);
   }
 }
 run().catch(console.dir);
-// =======================================
+// ======================================
 // Routes
 app.get("/", (req, res) => {
   res.send("Book Verse Server is running!");
